@@ -1,3 +1,5 @@
+.DS_Store
+
 # DSPy stuff
 dpsy_module.pkl
 openai_usage.log
