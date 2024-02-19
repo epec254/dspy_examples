@@ -1,3 +1,10 @@
+# DSPy stuff
+dpsy_module.pkl
+openai_usage.log
+mlruns/
+local_cache/
+assertion.log
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
