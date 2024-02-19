@@ -168,7 +168,7 @@ def load_data():
 ################
 if __name__ == "__main__":
     if ENABLE_ARIZE_TRACING:
-        setup_arize_phoenx()
+        setup_arize_phoenix()
 
     # Requires having a local MLflow tracking server running
     client = MlflowClient(tracking_uri="http://127.0.0.1:8080")
