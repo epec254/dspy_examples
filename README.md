@@ -48,3 +48,7 @@ model = AzureOpenAI(
 )
 dspy.configure(lm=model)
 ```
+
+## TODO
+- Auto generate the PyFunc wrapper from the DSPy signatures
+- Refactor out the common boiler plate code between GSM8k and MMLU
