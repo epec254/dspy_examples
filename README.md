@@ -3,7 +3,7 @@ This is Eric's playground with [DSPy](https://github.com/stanfordnlp/dspy/).
 
 It includes sample DSPy modules for GSM8K and MMLU.  These are fully self contained e.g., you can run them by going `python ./name_of_file.py` and it just works.
 
-Tested on Python 3.11.  Install `pip install mlflow dpsy`.
+Tested on Python 3.11.  Install `pip install mlflow dpsy-ai`.
 
 ## GSM8k
 
