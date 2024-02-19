@@ -19,6 +19,16 @@ Optionally, adjust `ENABLE_ARIZE_TRACING = true` if you want to see trace logs i
 - Install the packages `pip install arize-phoenix openinference-instrumentation-dspy opentelemetry-exporter-otlp`
 - Start their container `docker run -p 6006:6006 arizephoenix/phoenix:latest`
 
+## MMLU
+
+1. Open `dpsy_gsm8k.py`
+2. Add your OpenAI key to line 18 `os.environ["OPENAI_API_KEY"] = ...`
+3. Edit lines 193-195 if you want to run on a subset of the dataset first to test
+3. Start the local MLflow server with `mlflow server --host 127.0.0.1 --port 8080`
+4. Execute `python ./dpsy_mmlu.py`
+5. View the runs in MLflow and/or via the console
+
+If you prefer to re-ETL the MMLU data, you can run `download_mmlu.py`.  However, the results of this download are saved in `mmlu_*.json`.
 
 
 ## Azure OpenAI
