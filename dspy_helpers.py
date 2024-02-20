@@ -7,6 +7,8 @@ from dspy.teleprompt import (
 )
 import random
 import mlflow
+import re
+import json
 
 
 def get_optimized_model_BootstrapFewShot(
@@ -145,3 +147,59 @@ def run_eval_and_log_to_mlflow(evaluator, model_to_evaluate):
 
     # print(dict_for_mlflow_logging)
     mlflow.log_table(data=dict_for_mlflow_logging, artifact_file="eval_results.json")
+
+
+def log_model_dump_to_mlflow(model):
+
+    model_predictors = []
+    for item in model.named_predictors():
+        param_name = f"signature_{item[0]}"
+        param_name = re.sub(r"[^a-zA-Z0-9]", "", param_name)
+        model_predictors.append(
+            {
+                "param_name": item[0],
+                "param_value": str(item[1].extended_signature),
+            }
+        )
+        mlflow.log_param(
+            param_name, str(item[1].extended_signature)[:5990]
+        )  # mlflow has a 6000 char limit
+        # i = i + 1
+    named_predictors_file = "model_named_predictors.json"
+    with open(named_predictors_file, "w") as f:
+        json.dump(model_predictors, f)
+
+    mlflow.log_artifact(named_predictors_file)
+
+    dump_state_file = "dump_state.json"
+    with open(dump_state_file, "w") as f:
+        json.dump(model.dump_state(), f)
+
+    mlflow.log_artifact(dump_state_file)
+
+    mlflow.log_param("state", model.dump_state())
+
+
+################
+# Local tracking of calls sent to the LLM
+################
+def setup_arize_phoenix():
+    # Arize Phoenix instrumentation - must start a local server
+    from openinference.instrumentation.dspy import DSPyInstrumentor
+    from opentelemetry import trace as trace_api
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk import trace as trace_sdk
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
+    # Trace logging
+    endpoint = "http://127.0.0.1:6006/v1/traces"
+    resource = Resource(attributes={})
+    tracer_provider = trace_sdk.TracerProvider(resource=resource)
+    span_otlp_exporter = OTLPSpanExporter(endpoint=endpoint)
+    tracer_provider.add_span_processor(
+        SimpleSpanProcessor(span_exporter=span_otlp_exporter)
+    )
+
+    trace_api.set_tracer_provider(tracer_provider=tracer_provider)
+    DSPyInstrumentor().instrument()

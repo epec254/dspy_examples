@@ -9,16 +9,16 @@ import cloudpickle
 import pandas as pd
 from dspy_helpers import *
 import json
+from dsp.utils import deduplicate
 
 ################
 # Configuration
 ################
 
-# Eric's key
-os.environ["OPENAI_API_KEY"] = "<your-key-here>"
+os.environ["OPENAI_API_KEY"] = "<insert-key-here>"
 
 # Log the unoptimized, baseline model to MLflow?
-LOG_BASELINE_MODEL = False
+LOG_BASELINE_MODEL = True
 # Evaluate each logged model?
 SHOULD_EVALUATE = True
 # Try to optimize the model?
@@ -35,6 +35,21 @@ ENABLE_ARIZE_TRACING = False
 ################
 
 
+class GenerateSearchQuery(dspy.Signature):
+    """Write a simple search query that will help answer a complex question."""
+
+    subject = dspy.InputField(desc="the subject of the question")
+    question = dspy.InputField(
+        desc="the question to be answered with one of the choices"
+    )
+    context = dspy.InputField(desc="may contain relevant facts")
+    choice_a = dspy.InputField(desc="the first choice you can select from")
+    choice_b = dspy.InputField(desc="the second choice you can select from")
+    choice_c = dspy.InputField(desc="the third choice you can select from")
+    choice_d = dspy.InputField(desc="the fourth choice you can select from")
+    query = dspy.OutputField(desc="search query to help you solve the question")
+
+
 class MMLUSignature(dspy.Signature):
     """Solve tricky multiple choice problems about various subjects.  There are 57 subjects across STEM, the humanities, the social sciences, and more. It ranges in difficulty from an elementary level to an advanced professional level, and it tests both world knowledge and problem solving ability. Subjects range from traditional areas, such as mathematics and history, to more specialized areas like law and ethics. Some require you to answer a question, some require you to fill in the blank, some require you to finish the question with the correct answer."""
 
@@ -42,6 +57,7 @@ class MMLUSignature(dspy.Signature):
     question = dspy.InputField(
         desc="the question to be answered with one of the choices"
     )
+    context = GenerateSearchQuery.signature.context
     choice_a = dspy.InputField(desc="the first choice you can select from")
     choice_b = dspy.InputField(desc="the second choice you can select from")
     choice_c = dspy.InputField(desc="the third choice you can select from")
@@ -65,6 +81,45 @@ class EricMMLU(dspy.Module):
             choice_c=choice_c,
             choice_d=choice_d,
         )
+
+
+class SimplifiedBaleenMMLU(dspy.Module):
+    def __init__(self, passages_per_hop=3, max_hops=2):
+        super().__init__()
+
+        self.generate_query = [
+            dspy.ChainOfThought(GenerateSearchQuery) for _ in range(max_hops)
+        ]
+        self.retrieve = dspy.Retrieve(k=passages_per_hop)
+        self.generate_answer = dspy.ChainOfThought(MMLUSignature)
+        self.max_hops = max_hops
+
+    def forward(self, subject, question, choice_a, choice_b, choice_c, choice_d):
+        context = []
+
+        for hop in range(self.max_hops):
+            query = self.generate_query[hop](
+                context=context,
+                subject=subject,
+                question=question,
+                choice_a=choice_a,
+                choice_b=choice_b,
+                choice_c=choice_c,
+                choice_d=choice_d,
+            ).query
+            passages = self.retrieve(query).passages
+            context = deduplicate(context + passages)
+
+        pred = self.generate_answer(
+            context=context,
+            subject=subject,
+            question=question,
+            choice_a=choice_a,
+            choice_b=choice_b,
+            choice_c=choice_c,
+            choice_d=choice_d,
+        )
+        return dspy.Prediction(context=context, answer=pred.answer)
 
 
 ################
@@ -174,18 +229,21 @@ if __name__ == "__main__":
 
     # Requires having a local MLflow tracking server running
     client = MlflowClient(tracking_uri="http://127.0.0.1:8080")
-    mlflow.set_experiment("mmlu_v2")
+    mlflow.set_experiment("mmlu_rag`")
 
     # DSPY setup
     # regular OpenAI
     model = dspy.OpenAI(model="gpt-3.5-turbo")
+    colbertv2_wiki17_abstracts = dspy.ColBERTv2(
+        url="http://20.102.90.50:2017/wiki17_abstracts"
+    )
 
-    dspy.configure(lm=model)
+    dspy.configure(lm=model, rm=colbertv2_wiki17_abstracts)
 
     data = load_data()
 
     # original model
-    original = EricMMLU()
+    original = SimplifiedBaleenMMLU()
 
     trainset = data["dev"]  # [:10]
     valset = data["validation"]  # [:10]
