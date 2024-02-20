@@ -6,6 +6,8 @@ openai_usage.log
 mlruns/
 local_cache/
 assertion.log
+dump_state.json
+model_named_predictors.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

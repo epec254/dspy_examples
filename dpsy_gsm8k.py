@@ -9,7 +9,6 @@ import cloudpickle
 import pandas as pd
 from dspy_helpers import *
 
-
 ################
 # Configuration
 ################
@@ -131,6 +130,7 @@ def setup_arize_phoenx():
     from opentelemetry.sdk import trace as trace_sdk
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
     # Trace logging
     endpoint = "http://127.0.0.1:6006/v1/traces"
     resource = Resource(attributes={})
@@ -153,7 +153,7 @@ if __name__ == "__main__":
 
     # Requires having a local MLflow tracking server running
     client = MlflowClient(tracking_uri="http://127.0.0.1:8080")
-    mlflow.set_experiment("dspy_gsm8k_full")
+    mlflow.set_experiment("dspy_gsm8k")
 
     # DSPY setup
     # regular OpenAI
@@ -166,9 +166,9 @@ if __name__ == "__main__":
     # original model
     original = EricGsm8k()
 
-    trainset = gms8k.train #[:10]
-    valset = gms8k.dev #[:10]
-    testset = gms8k.test #[:200]
+    trainset = gms8k.train  # [:10]
+    valset = gms8k.dev  # [:10]
+    testset = gms8k.test  # [:200]
 
     # eric's run name generator so we can have {run-name}-optimized & {run-name}-unoptimized but still keep mlflow fun names
     run_name = generate_run_name()
@@ -246,11 +246,7 @@ if __name__ == "__main__":
                 pip_requirements=["dspy", "cloudpickle"],
             )
 
-            for item in model.named_predictors():
-                name = item[0]
-                mlflow.log_param(f"signature_{item[0]}", item[1].extended_signature)
-
-            mlflow.log_param("state", model.dump_state())
+            log_model_dump_to_mlflow(model)
             mlflow.log_param("testset_N", len(testset))
             mlflow.log_param("trainset_N", len(trainset))
             mlflow.log_param("valset_N", len(valset))

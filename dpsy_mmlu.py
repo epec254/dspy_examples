@@ -34,6 +34,7 @@ ENABLE_ARIZE_TRACING = False
 ### The core definition of the Signature & Model
 ################
 
+
 class MMLUSignature(dspy.Signature):
     """Solve tricky multiple choice problems about various subjects.  There are 57 subjects across STEM, the humanities, the social sciences, and more. It ranges in difficulty from an elementary level to an advanced professional level, and it tests both world knowledge and problem solving ability. Subjects range from traditional areas, such as mathematics and history, to more specialized areas like law and ethics. Some require you to answer a question, some require you to fill in the blank, some require you to finish the question with the correct answer."""
 
@@ -48,6 +49,7 @@ class MMLUSignature(dspy.Signature):
     answer = dspy.OutputField(
         desc="The answer which is always one choice_a, choice_b, choice_c, or choice_d - NOT the answer itself"
     )
+
 
 class EricMMLU(dspy.Module):
     def __init__(self):
@@ -265,11 +267,8 @@ if __name__ == "__main__":
                 pip_requirements=["dspy", "cloudpickle"],
             )
 
-            for item in model.named_predictors():
-                name = item[0]
-                mlflow.log_param(f"signature_{item[0]}", item[1].extended_signature)
+            log_model_dump_to_mlflow(model)
 
-            mlflow.log_param("state", model.dump_state())
             mlflow.log_param("testset_N", len(testset))
             mlflow.log_param("trainset_N", len(trainset))
             mlflow.log_param("valset_N", len(valset))
