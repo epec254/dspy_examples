@@ -172,8 +172,14 @@ def log_model_dump_to_mlflow(model):
     mlflow.log_artifact(named_predictors_file)
 
     dump_state_file = "dump_state.json"
+    states = []
+    for key, value in model.dump_state().items():
+        states.append({str(key): str(value)})
+
+    # print(type(model.dump_state()))
+
     with open(dump_state_file, "w") as f:
-        json.dump(model.dump_state(), f)
+        json.dump(states, f)
 
     mlflow.log_artifact(dump_state_file)
 
